@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { createEvent, getAllEvents, getEventsByTag, getEventsByDateRange } from "@/lib/events";
+import { validateCreateEvent, ValidationException } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,9 @@ export async function GET(request: NextRequest) {
     let events;
 
     if (tag) {
-      events = await getEventsByTag(tag);
+      // Sanitize tag input
+      const sanitizedTag = tag.trim().toLowerCase().slice(0, 50);
+      events = await getEventsByTag(sanitizedTag);
     } else if (startDate && endDate) {
       events = await getEventsByDateRange(startDate, endDate);
     } else {
@@ -41,24 +44,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, date, tags } = body;
 
-    if (!title || !description || !date) {
+    // Validate and sanitize input
+    const validatedInput = validateCreateEvent(body);
+
+    const event = await createEvent(validatedInput);
+
+    return NextResponse.json(event, { status: 201 });
+  } catch (error) {
+    if (error instanceof ValidationException) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Validation failed", details: error.errors },
         { status: 400 }
       );
     }
 
-    const event = await createEvent({
-      title,
-      description,
-      date,
-      tags: tags || [],
-    });
-
-    return NextResponse.json(event, { status: 201 });
-  } catch (error) {
     console.error("Error creating event:", error);
     return NextResponse.json(
       { error: "Failed to create event" },

@@ -15,7 +15,10 @@ const sessionOptions: SessionOptions = {
   cookieName: "medevents_session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
+    httpOnly: true, // Prevent JavaScript access to cookies
+    sameSite: "lax", // CSRF protection
     maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: "/", // Cookie available across the site
   },
 };
 

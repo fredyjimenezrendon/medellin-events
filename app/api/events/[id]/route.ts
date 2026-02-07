@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getEventById, updateEvent, deleteEvent } from "@/lib/events";
+import { validateUpdateEvent, ValidationException } from "@/lib/validation";
 
 export async function GET(
   request: NextRequest,
@@ -8,6 +9,15 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    // Validate ID format
+    if (!id || !id.startsWith("event:")) {
+      return NextResponse.json(
+        { error: "Invalid event ID" },
+        { status: 400 }
+      );
+    }
+
     const event = await getEventById(id);
 
     if (!event) {
@@ -42,9 +52,21 @@ export async function PUT(
     }
 
     const { id } = await params;
+
+    // Validate ID format
+    if (!id || !id.startsWith("event:")) {
+      return NextResponse.json(
+        { error: "Invalid event ID" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
 
-    const event = await updateEvent(id, body);
+    // Validate and sanitize input
+    const validatedInput = validateUpdateEvent(body);
+
+    const event = await updateEvent(id, validatedInput);
 
     if (!event) {
       return NextResponse.json(
@@ -55,6 +77,13 @@ export async function PUT(
 
     return NextResponse.json(event);
   } catch (error) {
+    if (error instanceof ValidationException) {
+      return NextResponse.json(
+        { error: "Validation failed", details: error.errors },
+        { status: 400 }
+      );
+    }
+
     console.error("Error updating event:", error);
     return NextResponse.json(
       { error: "Failed to update event" },
@@ -78,6 +107,15 @@ export async function DELETE(
     }
 
     const { id } = await params;
+
+    // Validate ID format
+    if (!id || !id.startsWith("event:")) {
+      return NextResponse.json(
+        { error: "Invalid event ID" },
+        { status: 400 }
+      );
+    }
+
     const success = await deleteEvent(id);
 
     if (!success) {

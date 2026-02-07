@@ -63,7 +63,7 @@ A modern event management system built with Next.js, React, TypeScript, and Redi
 
 ### Quick Deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/medevents)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/fredyjimenezrendon/medellin-events)
 
 ### Manual Deployment
 
