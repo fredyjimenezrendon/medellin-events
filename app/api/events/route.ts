@@ -25,6 +25,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(events);
   } catch (error) {
     console.error("Error fetching events:", error);
+
+    // Provide more helpful error message for Redis issues
+    if (error instanceof Error) {
+      if (error.message.includes("Redis") || error.message.includes("ECONNREFUSED")) {
+        return NextResponse.json(
+          { error: "Database connection error. Please check Redis configuration." },
+          { status: 503 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { error: "Failed to fetch events" },
       { status: 500 }

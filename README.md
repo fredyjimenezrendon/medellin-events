@@ -2,15 +2,21 @@
 
 A modern event management system built with Next.js, React, TypeScript, and Redis. Allows admin users to create, edit, and delete events, while public users can view and filter events.
 
+**🔗 Live Demo**: [https://medellin-events.vercel.app](https://medellin-events.vercel.app)
+**📦 Repository**: [https://github.com/fredyjimenezrendon/medellin-events](https://github.com/fredyjimenezrendon/medellin-events)
+
 ## Features
 
 - **Public Event Viewing**: Browse all upcoming events with filtering by tags
+- **Google Maps Integration**: Embedded maps showing event locations with coordinates
 - **Admin Dashboard**: Secure admin panel for managing events
 - **Event CRUD**: Create, read, update, and delete events
+- **Interactive Location Picker**: Click on Google Maps to select event location coordinates
 - **Tag-based Filtering**: Filter events by tags
 - **Date Management**: Events are sorted by date
 - **Session-based Authentication**: Secure admin login using iron-session
 - **Redis Database**: Fast, scalable data storage with Upstash
+- **Security**: Input validation, rate limiting, XSS protection, and secure headers
 
 ## Tech Stack
 
@@ -39,23 +45,35 @@ A modern event management system built with Next.js, React, TypeScript, and Redi
    - Create a new Redis database
    - Copy the REST URL and Token
 
-3. **Configure environment variables**:
+3. **Set up Google Maps API** (Required for location picker):
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select existing
+   - Enable the following APIs:
+     - Maps JavaScript API
+     - Places API (optional, for future features)
+   - Create credentials (API Key)
+   - Copy your API key
+
+4. **Configure environment variables**:
    - Copy `.env.example` to `.env.local`
-   - Update with your Upstash credentials:
+   - Update with your credentials:
      ```
      UPSTASH_REDIS_REST_URL=your_redis_url
      UPSTASH_REDIS_REST_TOKEN=your_redis_token
+     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+     SESSION_SECRET=your_random_secret_key_min_32_chars
      ```
    - The default admin credentials are:
      - Username: `admin`
      - Password: `admin123`
+   - **Note**: The Google Maps API key is required for the interactive location picker in the admin dashboard
 
-4. **Run the development server**:
+5. **Run the development server**:
    ```bash
    npm run dev
    ```
 
-5. **Open your browser**:
+6. **Open your browser**:
    - Public events page: [http://localhost:3000](http://localhost:3000)
    - Admin dashboard: [http://localhost:3000/admin](http://localhost:3000/admin)
 
@@ -82,6 +100,7 @@ A modern event management system built with Next.js, React, TypeScript, and Redi
    ADMIN_USERNAME=admin
    ADMIN_PASSWORD_HASH_BASE64=JDJhJDEwJEh0L2w2ckxIcGlDNzhBSHlNYnZZVGVQVTRKeGFuUkVaWk14TVRhN1pjdEs0YVNGOXI2cC9T
    SESSION_SECRET=your_random_secret_key_min_32_chars
+   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
    ```
 
 4. **Deploy**: Click "Deploy" and wait for the build to complete
@@ -116,6 +135,8 @@ medevents/
 │   ├── layout.tsx         # Root layout
 │   ├── page.tsx           # Public events page
 │   └── globals.css        # Global styles
+├── components/
+│   └── LocationPicker.tsx # Interactive Google Maps picker
 ├── lib/
 │   ├── redis.ts           # Redis client configuration
 │   ├── session.ts         # Session management
@@ -144,11 +165,21 @@ medevents/
 ## Event Data Model
 
 ```typescript
-{
+interface Location {
+  address: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  placeId?: string;
+}
+
+interface Event {
   id: string;
   title: string;
   description: string;
   date: string;
+  location: Location;
   tags: string[];
   createdAt: string;
   updatedAt: string;
