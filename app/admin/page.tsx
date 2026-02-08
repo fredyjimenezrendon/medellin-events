@@ -1,115 +1,59 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Event, CreateEventInput } from "@/types/event";
-import LocationPicker from "@/components/LocationPicker";
+import { useRouter } from "next/navigation";
+import { Event } from "@/types/event";
+import Skeleton from "@/components/Skeleton";
+import TableRowSkeleton from "@/components/TableRowSkeleton";
+import Link from "next/link";
 
 export default function AdminPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-
-  const [formData, setFormData] = useState<CreateEventInput>({
-    title: "",
-    description: "",
-    date: "",
-    location: {
-      address: "",
-    },
-    tags: [],
-  });
-  const [tagInput, setTagInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     checkAuth();
   }, []);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchEvents();
-    }
-  }, [isLoggedIn]);
-
   const checkAuth = async () => {
     try {
       const response = await fetch("/api/auth/check");
       const data = await response.json();
-      setIsLoggedIn(data.isAdmin);
+
+      if (!data.isAdmin) {
+        router.push("/login");
+        return;
+      }
+
+      setAuthChecked(true);
+      fetchEvents();
     } catch (error) {
       console.error("Error checking auth:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (response.ok) {
-        setIsLoggedIn(true);
-      } else {
-        const data = await response.json();
-        setLoginError(data.error || "Login failed");
-      }
-    } catch (error) {
-      setLoginError("An error occurred during login");
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      setIsLoggedIn(false);
-      setUsername("");
-      setPassword("");
-    } catch (error) {
-      console.error("Error logging out:", error);
+      router.push("/login");
     }
   };
 
   const fetchEvents = async () => {
+    setLoading(true);
     try {
       const response = await fetch("/api/events");
       const data = await response.json();
       setEvents(data);
     } catch (error) {
       console.error("Error fetching events:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleLogout = async () => {
     try {
-      const url = editingEvent ? `/api/events/${editingEvent.id}` : "/api/events";
-      const method = editingEvent ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        await fetchEvents();
-        resetForm();
-      }
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
     } catch (error) {
-      console.error("Error saving event:", error);
+      console.error("Error logging out:", error);
     }
   };
 
@@ -131,90 +75,21 @@ export default function AdminPage() {
     }
   };
 
-  const handleEdit = (event: Event) => {
-    setEditingEvent(event);
-    setFormData({
-      title: event.title,
-      description: event.description,
-      date: event.date,
-      location: event.location,
-      tags: event.tags,
-    });
-    setShowForm(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      date: "",
-      location: { address: "" },
-      tags: []
-    });
-    setTagInput("");
-    setEditingEvent(null);
-    setShowForm(false);
-  };
-
-  const addTag = () => {
-    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-      setFormData({ ...formData, tags: [...formData.tags, tagInput.trim()] });
-      setTagInput("");
-    }
-  };
-
-  const removeTag = (tag: string) => {
-    setFormData({ ...formData, tags: formData.tags.filter((t) => t !== tag) });
-  };
-
-  if (loading) {
+  if (!authChecked || loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <p className="text-gray-600">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Login</h1>
-          <form onSubmit={handleLogin}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            {loginError && (
-              <p className="text-red-600 text-sm mb-4">{loginError}</p>
-            )}
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              Login
-            </button>
-          </form>
+        <div className="flex justify-between items-center mb-8">
+          <Skeleton height="2.25rem" width="15rem" />
+          <Skeleton height="2.5rem" width="5rem" />
+        </div>
+        <Skeleton className="mb-6" height="2.5rem" width="10rem" />
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <Skeleton height="1.5rem" width="30%" className="mb-4" />
+          <div className="space-y-3">
+            <Skeleton height="3rem" width="100%" />
+            <Skeleton height="3rem" width="100%" />
+            <Skeleton height="3rem" width="100%" />
+          </div>
         </div>
       </div>
     );
@@ -233,155 +108,13 @@ export default function AdminPage() {
       </div>
 
       <div className="mb-6">
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+        <Link
+          href="/admin/events/new"
+          className="inline-block bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
         >
-          {showForm ? "Cancel" : "Create New Event"}
-        </button>
+          Create New Event
+        </Link>
       </div>
-
-      {showForm && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            {editingEvent ? "Edit Event" : "Create New Event"}
-          </h2>
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                rows={4}
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date
-              </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location Address
-              </label>
-              <input
-                type="text"
-                value={formData.location.address}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  location: { ...formData.location, address: e.target.value }
-                })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g., 123 Main St, City, Country"
-                required
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Enter the full address where the event will take place
-              </p>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Event Location on Map (Optional)
-              </label>
-              <LocationPicker
-                onLocationSelect={(lat, lng) => {
-                  setFormData({
-                    ...formData,
-                    location: {
-                      ...formData.location,
-                      coordinates: lat && lng ? { lat, lng } : undefined,
-                    },
-                  });
-                }}
-                initialLat={formData.location.coordinates?.lat}
-                initialLng={formData.location.coordinates?.lng}
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags
-              </label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addTag();
-                    }
-                  }}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add a tag"
-                />
-                <button
-                  type="button"
-                  onClick={addTag}
-                  className="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
-                >
-                  Add
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="ml-2 text-blue-600 hover:text-blue-800"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
-              >
-                {editingEvent ? "Update Event" : "Create Event"}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
@@ -405,53 +138,63 @@ export default function AdminPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {events.map((event) => (
-              <tr key={event.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-500">
-                    {new Date(event.date).toLocaleDateString()}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-500 max-w-xs truncate">
-                    {event.location.address}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-1">
-                    {event.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleEdit(event)}
-                    className="text-blue-600 hover:text-blue-900 mr-4"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(event.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {loading ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRowSkeleton key={index} />
+              ))
+            ) : (
+              events.map((event) => (
+                <tr key={event.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {event.title}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500">
+                      {new Date(event.date).toLocaleDateString()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-500 max-w-xs truncate">
+                      {event.location.address}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {event.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <Link
+                      href={`/admin/events/${event.id}/edit`}
+                      className="text-blue-600 hover:text-blue-900 mr-4"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(event.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-        {events.length === 0 && (
-          <p className="text-center text-gray-600 py-8">No events yet. Create your first event!</p>
+        {!loading && events.length === 0 && (
+          <p className="text-center text-gray-600 py-8">
+            No events yet. Create your first event!
+          </p>
         )}
       </div>
     </div>

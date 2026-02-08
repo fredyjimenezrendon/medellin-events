@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import Skeleton from "./Skeleton";
 
 interface LocationPickerProps {
   onLocationSelect: (lat: number, lng: number) => void;
@@ -65,10 +66,11 @@ export default function LocationPicker({
 
   if (!isLoaded) {
     return (
-      <div className="bg-gray-100 rounded-md p-4 h-[400px] flex items-center justify-center">
-        <div className="text-gray-600">
-          <div className="animate-pulse">Loading map...</div>
+      <div>
+        <div className="mb-2">
+          <Skeleton height="1.25rem" width="50%" />
         </div>
+        <Skeleton height="400px" width="100%" borderRadius="0.5rem" />
       </div>
     );
   }
