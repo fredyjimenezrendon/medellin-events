@@ -1,3 +1,5 @@
+"use client";
+
 interface EventFilterProps {
   tags: string[];
   selectedTag: string;

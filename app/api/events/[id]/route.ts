@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { getEventById, updateEvent, deleteEvent } from "@/lib/events";
 import { validateUpdateEvent, ValidationException } from "@/lib/validation";
@@ -75,6 +76,10 @@ export async function PUT(
       );
     }
 
+    revalidatePath("/");
+    revalidatePath("/admin");
+    revalidatePath(`/admin/events/${id}/edit`);
+
     return NextResponse.json(event);
   } catch (error) {
     if (error instanceof ValidationException) {
@@ -124,6 +129,9 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    revalidatePath("/");
+    revalidatePath("/admin");
 
     return NextResponse.json({ success: true });
   } catch (error) {

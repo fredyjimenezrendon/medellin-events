@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { createEvent, getAllEvents, getEventsByTag, getEventsByDateRange } from "@/lib/events";
 import { validateCreateEvent, ValidationException } from "@/lib/validation";
@@ -60,6 +61,9 @@ export async function POST(request: NextRequest) {
     const validatedInput = validateCreateEvent(body);
 
     const event = await createEvent(validatedInput);
+
+    revalidatePath("/");
+    revalidatePath("/admin");
 
     return NextResponse.json(event, { status: 201 });
   } catch (error) {
