@@ -58,9 +58,6 @@ next-env.d.ts
 *.sublime-workspace
 *.sublime-project
 
-# Claude Code
-.claude/
-
 # OS files
 *.log
 .cache/
